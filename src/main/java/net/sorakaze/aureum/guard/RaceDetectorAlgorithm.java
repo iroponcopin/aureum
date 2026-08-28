@@ -53,12 +53,12 @@ public final class RaceDetectorAlgorithm {
 	 * 検出器 1 個ぶんの状態。mixin(実物の ThreadingDetector)と
 	 * JUnit(素の実装)の両方がこれを実装する。
 	 *
-	 * <p>すべてのメソッドは {@link #monitor()} の同期下でだけ呼ばれる
+	 * <p>すべてのメソッドは {@link #aureum$monitor()} の同期下でだけ呼ばれる
 	 * (published の読みだけは待機ループの再確認でも使うが、それも同期下)。
 	 */
 	public interface State {
 		/** 同期と wait/notify に使うモニタ。検出器自身を返すのが自然。 */
-		Object monitor();
+		Object aureum$monitor();
 
 		Thread aureum$getOwner();
 
@@ -81,7 +81,7 @@ public final class RaceDetectorAlgorithm {
 	 * publish した例外を投げる。
 	 */
 	public static void lock(final State state) {
-		Object monitor = state.monitor();
+		Object monitor = state.aureum$monitor();
 		synchronized (monitor) {
 			if (state.aureum$getOwner() == null) {
 				state.aureum$setOwner(Thread.currentThread());
@@ -113,7 +113,7 @@ public final class RaceDetectorAlgorithm {
 	 *     (= バニラの実物)を渡す。クラッシュレポートの内容はバニラが作る。
 	 */
 	public static void unlock(final State state, final Function<Thread, RuntimeException> exceptionFactory) {
-		Object monitor = state.monitor();
+		Object monitor = state.aureum$monitor();
 		synchronized (monitor) {
 			Thread failed = state.aureum$getFailedThread();
 			if (failed != null) {

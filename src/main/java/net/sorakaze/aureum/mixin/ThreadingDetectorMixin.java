@@ -103,7 +103,7 @@ public abstract class ThreadingDetectorMixin implements RaceDetectorAlgorithm.St
 	// ---- RaceDetectorAlgorithm.State ------------------------------------------------------
 
 	@Override
-	public Object monitor() {
+	public Object aureum$monitor() {
 		return this;
 	}
 

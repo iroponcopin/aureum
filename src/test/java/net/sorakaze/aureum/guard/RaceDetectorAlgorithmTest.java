@@ -30,7 +30,7 @@ class RaceDetectorAlgorithmTest {
 		private RuntimeException published;
 
 		@Override
-		public Object monitor() {
+		public Object aureum$monitor() {
 			return this;
 		}
 
