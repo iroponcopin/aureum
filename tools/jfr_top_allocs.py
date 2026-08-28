@@ -34,12 +34,23 @@ def main() -> int:
     total = 0.0
     object_class = None
     weight = None
-    top_frame = None
+    frames = []
     in_stack = False
+    def flush():
+        nonlocal object_class, weight, total
+        if object_class and weight is not None and frames:
+            site = " <- ".join(frames[:3])
+            by_site[f"{object_class}  @  {site}"] += weight
+            by_type[object_class] += weight
+            total += weight
+        object_class = None
+        weight = None
     for line in proc.stdout.splitlines():
         stripped = line.strip()
         m = re.match(r"objectClass = (.+?) \(", stripped)
         if m:
+            flush()
+            frames = []
             object_class = m.group(1)
         m = re.match(r"weight = ([0-9.]+) ([kMG]?B)", stripped)
         if m:
@@ -49,20 +60,15 @@ def main() -> int:
             weight = value * factor
         if stripped.startswith("stackTrace = ["):
             in_stack = True
-            top_frame = None
+            frames = []
             continue
         if in_stack:
             if stripped == "]" or stripped.startswith("jdk.jfr"):
                 in_stack = False
-            elif top_frame is None and stripped:
-                top_frame = stripped.split(" line:")[0].strip()
-                # イベント終端扱い: サイト＝(型, 先頭フレーム)
-                if object_class and weight is not None:
-                    by_site[f"{object_class}  @  {top_frame}"] += weight
-                    by_type[object_class] += weight
-                    total += weight
-                    object_class = None
-                    weight = None
+                flush()
+            elif len(frames) < 3 and stripped:
+                frames.append(stripped.split(" line:")[0].strip())
+    flush()
     print(f"total sampled allocation weight: {total / 1e6:.1f} MB (TLAB-sample estimate)")
     print(f"\n== top {top_n} allocation sites (type @ topmost frame) ==")
     for site, w in sorted(by_site.items(), key=lambda kv: -kv[1])[:top_n]:
