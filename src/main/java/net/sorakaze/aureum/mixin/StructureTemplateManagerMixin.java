@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -35,10 +36,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * 初回アクセスと全く同じ経路なので、観測可能な違いはディスク再読の時間だけ。
  *
  * <h2>プレイヤー作成テンプレートは絶対に捨てない</h2>
- * structure block の保存モードは {@code getOrCreate} でキャッシュに<b>未保存の</b>
- * テンプレートを作る。これを捨てると保存前の作業が消える。だから
- * {@code getOrCreate} を通った id は<b>ピン留め</b>して追い出し対象から外す
- * (GameTest {@code TemplateCacheTests} が固定)。
+ * structure block の保存モードは {@code getOrCreate} 内の新規作成枝でキャッシュに
+ * <b>ディスクに存在しない未保存の</b>テンプレートを作る。これを捨てると保存前の
+ * 作業が消える。だから<b>その新規作成枝を通った id だけ</b>をピン留めして
+ * 追い出し対象から外す(GameTest {@code TemplateCacheTests} が固定)。
+ * getOrCreate でも<b>ディスクから読めた</b>項目はピン留めしない — ワールド生成は
+ * テンプレートを getOrCreate で読むので、そこをピン留めすると追い出しが
+ * 全く働かなくなる(実際に一度そうなった — 下の aureum$pinFreshlyCreated 参照)。
  *
  * <h2>並行性</h2>
  * {@code structureRepository} は ConcurrentHashMap で、ワールド生成スレッドが
@@ -77,10 +81,30 @@ public abstract class StructureTemplateManagerMixin implements TemplateCacheAcce
 		this.aureum$lastAccess.put(id, System.nanoTime());
 	}
 
-	/** structure block の保存経路。<b>get より先に</b>ピン留めして競合窓を無くす。 */
-	@Inject(method = "getOrCreate", at = @At("HEAD"))
-	private void aureum$pinCreated(final Identifier id, final CallbackInfoReturnable<StructureTemplate> cir) {
-		this.aureum$pinned.add(id);
+	/**
+	 * <b>「空で新規作成」した項目だけ</b>ピン留めする。
+	 *
+	 * <p>最初の実装は getOrCreate の HEAD で無条件にピン留めしていた —
+	 * それは<b>誤り</b>だった。バニラのワールド生成(jigsaw の SinglePoolElement や
+	 * TemplateStructurePiece)はテンプレートを {@code getOrCreate} で読むので、
+	 * 全ワールド生成テンプレートがピン留めされ、追い出しが 1 件も起きなかった
+	 * (ベンチ実測: TTL on/off で StructureBlockInfo が同数 302,650 のまま。
+	 * GameTest は get() 経路しか見ていなかったので緑のまま — まさに
+	 * 「何もしていないのに緑」であり、ベンチが実効を数えていたから捕まえられた)。
+	 *
+	 * <p>守るべきものは「<b>ディスクに無い、作りかけの</b>テンプレート」だけである。
+	 * それは getOrCreate の中の {@code structureRepository.put(...)}(= get が空だった
+	 * ときの新規作成枝)でしか生まれない。だからその put そのものに割り込んで
+	 * ピン留めする。ディスクから読めた項目は捨てても透過的に読み直せるので
+	 * ピン留めしない。
+	 */
+	@SuppressWarnings("unchecked")
+	@Redirect(method = "getOrCreate", at = @At(value = "INVOKE",
+		target = "Ljava/util/Map;put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"))
+	private Object aureum$pinFreshlyCreated(final Map<Identifier, Optional<StructureTemplate>> repository,
+			final Object id, final Object template) {
+		this.aureum$pinned.add((Identifier) id);
+		return repository.put((Identifier) id, (Optional<StructureTemplate>) template);
 	}
 
 	@Inject(method = "remove", at = @At("RETURN"))

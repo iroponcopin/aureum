@@ -63,7 +63,51 @@ public class TemplateCacheTests {
 		helper.succeed();
 	}
 
-	/** structure block(getOrCreate)由来はピン留めされ、TTL 0 でも生き残る。 */
+	/**
+	 * <b>ワールド生成が使う経路(ディスクにあるテンプレートへの getOrCreate)は
+	 * ピン留めされず、追い出せること。</b>
+	 *
+	 * <p>この回帰テストはベンチが見つけた実バグを固定する: 最初の実装は
+	 * getOrCreate を無条件にピン留めしており、ワールド生成テンプレートが全部
+	 * ピン留めされて追い出しが 1 件も起きなかった(TTL on/off で
+	 * StructureBlockInfo 302,650 個が同数のまま)。当時の GameTest は get() 経路
+	 * しか見ていなかったので緑のままだった。
+	 */
+	@GameTest(maxTicks = 400)
+	public void worldgenPathTemplatesAreEvictable(final GameTestHelper helper) {
+		StructureTemplateManager manager = helper.getLevel().getServer().getStructureManager();
+		if (!(manager instanceof TemplateCacheAccess access)) {
+			helper.fail("TTL mixin did not apply");
+			return;
+		}
+		Identifier id = manager.listTemplates().findFirst().orElse(null);
+		if (id == null) {
+			helper.fail("no vanilla structure templates are listed");
+			return;
+		}
+		// ワールド生成と同じ入口: ディスクに実在するテンプレートを getOrCreate で読む。
+		StructureTemplate viaWorldgenPath = manager.getOrCreate(id);
+		if (viaWorldgenPath == null || viaWorldgenPath.getSize().equals(net.minecraft.core.Vec3i.ZERO)) {
+			helper.fail("disk-backed template " + id + " did not load via getOrCreate — subject missing");
+			return;
+		}
+		int pinnedBefore = access.aureum$pinnedCount();
+		int evicted = access.aureum$evictStale(0L);
+		if (evicted < 1) {
+			helper.fail("a disk-backed template loaded through getOrCreate (the worldgen path) was NOT"
+				+ " evictable — the pin heuristic has regressed to pin-everything and the TTL is inert"
+				+ " (pinned=" + pinnedBefore + ")");
+			return;
+		}
+		Optional<StructureTemplate> reloaded = manager.get(id);
+		if (reloaded.isEmpty() || !reloaded.get().getSize().equals(viaWorldgenPath.getSize())) {
+			helper.fail("template " + id + " did not reload transparently after eviction");
+			return;
+		}
+		helper.succeed();
+	}
+
+	/** structure block(getOrCreate の新規作成枝)由来はピン留めされ、TTL 0 でも生き残る。 */
 	@GameTest(maxTicks = 400)
 	public void playerCreatedTemplatesArePinned(final GameTestHelper helper) {
 		StructureTemplateManager manager = helper.getLevel().getServer().getStructureManager();
