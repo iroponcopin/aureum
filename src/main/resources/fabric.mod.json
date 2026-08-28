@@ -1,0 +1,36 @@
+{
+	"schemaVersion": 1,
+	"id": "aureum",
+	"version": "${version}",
+	"name": "Aureum",
+	"description": "Lightweight optimisation mod for game logic, memory and server tick cost. Does not touch the chunk-render pipeline, so it runs alongside Sodium and the Alpha pack.",
+	"authors": [
+		"IROHA"
+	],
+	"contact": {},
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"net.sorakaze.aureum.Aureum"
+		],
+		"client": [
+			"net.sorakaze.aureum.client.AureumClient"
+		]
+	},
+	"mixins": [
+		{
+			"config": "aureum.mixins.json"
+		},
+		{
+			"config": "aureum.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

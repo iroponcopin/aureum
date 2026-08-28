@@ -1,0 +1,85 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+// Aureum は Alpha パックとは別ブランドの軽量化 MOD。成果物は aureum-<version>.jar。
+base {
+	archivesName = 'aureum'
+}
+
+repositories {
+}
+
+sourceSets {
+	gametest {
+		compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
+		runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
+	}
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	mods {
+		"aureum" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+}
+
+loom {
+	runs {
+		// 正当性 GameTest(専用サーバー上で実行、レポートは XML)。
+		// 判定はレポートと自分のログ行で行う — exit code では判定しない
+		// (mods-src の実測: server.halt(false) のため rc=0 は何も証明しない)。
+		gametest {
+			server()
+			name = "Game Test"
+			source sourceSets.gametest
+			vmArg "-Dfabric-api.gametest=true"
+			vmArg "-Dfabric-api.gametest.report-file=${project.layout.buildDirectory.get()}/gametest-report.xml"
+			runDir "build/run-gametest"
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+java {
+	withSourcesJar()
+
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+jar {
+	def projectName = project.name
+	inputs.property "projectName", projectName
+
+	from("LICENSE") {
+		rename { "${it}_$projectName"}
+	}
+}
