@@ -1,0 +1,64 @@
+# Aureum v1.0.0 — 検証記録
+
+規約: **すべての検証は独立に 2 回**走らせ、両方の結果を記録する。
+すべての正当性テストに**負の対照**(わざと壊して赤くなることの確認)を付ける。
+判定は必ずテスト自身の出力(レポート XML・ログ行)で行い、exit code では行わない。
+
+## 1. 正当性テスト
+
+### JUnit(素の JVM、Minecraft 抜き)— 15 テスト
+
+| クラス | 内容 |
+|---|---|
+| RaceDetectorAlgorithmTest (4) | slimThreadingDetector の状態機械仕様: 単一スレッド静音・2 スレッド競合で両者同一例外+敗者解放・最後の敗者名で報告・未 lock unlock 無害 |
+| ClientTuningLogicTest (2) | particleLimit / blockEntityRenderDistanceCap の境界 |
+| AureumConfigTest (4) | validate の矯正(負値→0、TTL 60 秒床)・利用者値の保全・既定値 |
+| StaleDefaultRepairTest (5) | 化石既定値修復機構(合成表): 置換・保全・版スキップ・入れ子と許容差・壊れた版値 |
+
+- **RUN 1** (2026-08-28 21:35): `tests=15 failures+errors=0 skipped=0` — 全 PASSED(個別名の一覧はセッションログ)
+- **RUN 2** (2026-08-28 21:37, 負の対照の復旧後): `tests=15 failures+errors=0 skipped=0`
+
+### GameTest(専用サーバー、変換済みの実物クラス)— 7 テスト
+
+| テスト | 内容 |
+|---|---|
+| state_cache_dedup_tests_every_state_answers_like_vanilla | 全 32,366 ブロック状態 × 6 方向 × 3 支持タイプの isFaceSturdy、衝突形状、hasLargeCollisionShape、遮蔽 6 面 — 「キャッシュ経由」対「キャッシュ非経由の再計算」全数照合 |
+| state_cache_dedup_tests_dedup_actually_happened | 非空虚性の門: 共有が実際に起きた数字を要求(seen≥20,000・distinct が 1/4 未満・>500) |
+| thread_guard_tests_slim_guard_is_actually_applied | 非空虚性の門: 変換後フィールド aureum$owner の存在 |
+| thread_guard_tests_single_thread_cycles_are_silent | 実物検出器 10,000 周 + 実ブロック設置(PalettedContainer 書き込み経路) |
+| thread_guard_tests_race_crashes_both_threads_like_vanilla | 実競合: 両スレッドが同一の ReportedException、バニラ文言「Accessing … from multiple threads」 |
+| template_cache_tests_eviction_reloads_transparently | 追い出し(実際に ≥1 件)→ 透過的再読込・内容一致 |
+| template_cache_tests_player_created_templates_are_pinned | getOrCreate 由来はピン留めされ TTL 0 でも生存、remove で帳簿も消える |
+
+- **RUN 1** (2026-08-28 21:33, report mtime 21:33): 8/8 pass(vanilla always_pass 込み)、失敗 0
+- **RUN 2** (2026-08-28 21:38, report mtime 21:38, 負の対照の復旧後): 8/8 pass、失敗 0
+- どちらも実行前に `build/run-gametest` を掃除(蓄積ワールドが結果を変える事故の予防)。
+
+## 2. 負の対照(わざと壊して赤)— 全 6 件、すべて赤を実測してから復旧
+
+| # | 壊し方 | 期待した赤 | 実測 |
+|---|---|---|---|
+| NC1 | `-Daureum.debug.breakStateCacheDedup=true`(最初のキャッシュを全状態に配る) | dedup の 2 テスト | **赤**: `190860 mismatches across 32366 states; first: Block{minecraft:stone} isFaceSturdy(down,FULL) = false but recomputed true` / `32167 caches but 0 distinct`。他 5 テストは緑のまま(隔離確認) |
+| NC2 | mixin の checkAndUnlock で例外を握り潰す(ソース編集) | race テスト | **赤**: `the legitimate thread did not crash with ReportedException; got null` |
+| NC3 | evictStale のピン留め検査を外す(ソース編集) | pin テスト | **赤**: `the player-created template was evicted … pinning is broken` |
+| NC4 | RaceDetectorAlgorithm.unlock の throw を外す | JUnit race | **赤**: `raceThrowsTheSameExceptionOnBothThreads FAILED (AssertionFailedError at :119)` |
+| NC5 | shouldDrop の境界を `>=`→`>` | JUnit particle 境界 | **赤**: `particleBudgetBoundaries FAILED (:20)` |
+| NC6 | validate の TTL 60 秒床を外す | JUnit TTL 床 | **赤**: `validateEnforcesTtlFloor FAILED (:29)` |
+
+各対照の復旧後に上記 RUN 2(JUnit 15/15・GameTest 8/8)で緑へ戻ることを確認済み。
+
+## 3. 実測(ベンチ)
+
+→ `docs/BENCHMARKS.md`(数値・再現手順・生データの所在)。
+
+## 4. この環境で検証できないもの(所有者の実機確認 register)
+
+1. **particleLimit の実効果**(FPS・見た目) — クライアント/GPU なし。判定関数のみ JUnit で固定。
+   確認手順: config で `particleLimit: 3000` にして大型花火や爆発の負荷時にパーティクルが
+   打ち切られること・通常プレイで違和感がないこと。
+2. **blockEntityRenderDistanceCap の実効果** — 同上。`32` に設定して遠くのチェスト類が
+   描画されなくなり、近づけば描画されること。ビーコン光柱が距離に関係なく見えること
+   (対象外設計の確認)。
+3. **クライアント側での /aureum 表示**(翻訳キーの解決、ja_jp 表示)。
+4. Sodium との同時起動(このマシンに Sodium/クライアントが無い。設計上チャンク描画系
+   ミックスインはゼロだが、実機での同時起動確認は所有者側)。
