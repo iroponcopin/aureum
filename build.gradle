@@ -12,6 +12,8 @@ base {
 }
 
 repositories {
+	// 素の JUnit(と slf4j ランタイム)だけのため。MOD 本体の依存はここに足さない。
+	mavenCentral()
 }
 
 sourceSets {
@@ -22,6 +24,8 @@ sourceSets {
 }
 
 loom {
+	accessWidenerPath = file('src/main/resources/aureum.accesswidener')
+
 	splitEnvironmentSourceSets()
 
 	mods {
@@ -43,7 +47,29 @@ loom {
 			source sourceSets.gametest
 			vmArg "-Dfabric-api.gametest=true"
 			vmArg "-Dfabric-api.gametest.report-file=${project.layout.buildDirectory.get()}/gametest-report.xml"
+			// 負の対照専用: -PaureumBreakDedup=true で共有をわざと壊し、
+			// StateCacheDedupTests が赤くなることを確認する(通常は絶対に付けない)。
+			vmArg "-Daureum.debug.breakStateCacheDedup=${findProperty('aureumBreakDedup') ?: false}"
 			runDir "build/run-gametest"
+		}
+		// 再現可能な MSPT/ヒープ/アロケーション計測。tools/bench.sh から起動する。
+		// ヒープ比較のため JVM を固定(-Xms=-Xmx, G1)。ポートは他モジュールの
+		// 起動証明と衝突しない 25695(mods-src は 256xx 帯を使用)。
+		bench {
+			server()
+			name = "Aureum Bench"
+			source sourceSets.gametest
+			vmArg "-Daureum.bench=true"
+			vmArg "-Daureum.bench.warmupTicks=${findProperty('benchWarmup') ?: 2400}"
+			vmArg "-Daureum.bench.phaseTicks=${findProperty('benchPhase') ?: 4800}"
+			vmArg "-Daureum.bench.idleTicks=${findProperty('benchIdle') ?: 0}"
+			vmArg "-Xms2G"
+			vmArg "-Xmx2G"
+			vmArg "-XX:+UseG1GC"
+			programArg "--port"
+			programArg "25695"
+			programArg "nogui"
+			runDir "build/run-bench"
 		}
 	}
 }
@@ -53,6 +79,23 @@ dependencies {
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// 素の JUnit(Minecraft を起動せずに純ロジックを固定する)。
+	// RaceDetectorAlgorithm / clienttuning / config だけが対象 —
+	// ワールドが要るものは GameTest 側で検証する。
+	testImplementation platform('org.junit:junit-bom:5.11.4')
+	testImplementation 'org.junit.jupiter:junit-jupiter'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testImplementation 'com.google.code.gson:gson:2.11.0'
+	testImplementation 'org.slf4j:slf4j-api:2.0.16'
+	testRuntimeOnly 'org.slf4j:slf4j-simple:2.0.16'
+}
+
+test {
+	useJUnitPlatform()
+	testLogging {
+		events "passed", "failed", "skipped"
+	}
 }
 
 processResources {

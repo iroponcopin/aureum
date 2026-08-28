@@ -1,0 +1,11 @@
+{
+	"aureum.status.header": "Aureum %s — active optimisations:",
+	"aureum.status.on": "on",
+	"aureum.status.off": "off",
+	"aureum.status.dedup.on": "- Block-state cache sharing: %s caches held as %s distinct copies",
+	"aureum.status.dedup.off": "- Block-state cache sharing: %s",
+	"aureum.status.guard": "- Slim threading detector: %s",
+	"aureum.status.template.on": "- Structure template cache TTL: %s s (%s cached, %s pinned)",
+	"aureum.status.template.off": "- Structure template cache TTL: %s",
+	"aureum.status.client": "- Client toggles (not measurable on a dedicated server): particle limit %s, block-entity render distance cap %s"
+}

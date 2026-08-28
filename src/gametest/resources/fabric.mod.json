@@ -1,0 +1,22 @@
+{
+	"schemaVersion": 1,
+	"id": "aureum_gametest",
+	"version": "1.0.0",
+	"name": "aureum GameTests + Bench",
+	"description": "Test-only companion mod. Not shipped; present only on the runGametest / runBench classpath.",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-gametest": [
+			"net.sorakaze.aureum.gametest.StateCacheDedupTests",
+			"net.sorakaze.aureum.gametest.TemplateCacheTests",
+			"net.sorakaze.aureum.gametest.ThreadGuardTests"
+		],
+		"main": [
+			"net.sorakaze.aureum.bench.BenchEntrypoint"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"aureum": "*"
+	}
+}

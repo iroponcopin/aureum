@@ -3,7 +3,10 @@
 	"minVersion": "0.8",
 	"package": "net.sorakaze.aureum.client.mixin",
 	"compatibilityLevel": "JAVA_25",
+	"plugin": "net.sorakaze.aureum.mixin.AureumMixinPlugin",
 	"client": [
+		"BlockEntityRenderDispatcherMixin",
+		"ParticleEngineMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

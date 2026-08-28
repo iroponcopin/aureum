@@ -3,7 +3,11 @@
 	"minVersion": "0.8",
 	"package": "net.sorakaze.aureum.mixin",
 	"compatibilityLevel": "JAVA_25",
+	"plugin": "net.sorakaze.aureum.mixin.AureumMixinPlugin",
 	"mixins": [
+		"BlockStateBaseMixin",
+		"StructureTemplateManagerMixin",
+		"ThreadingDetectorMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

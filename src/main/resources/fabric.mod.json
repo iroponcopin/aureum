@@ -9,6 +9,7 @@
 	],
 	"contact": {},
 	"license": "MIT",
+	"icon": "assets/aureum/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
@@ -18,6 +19,7 @@
 			"net.sorakaze.aureum.client.AureumClient"
 		]
 	},
+	"accessWidener": "aureum.accesswidener",
 	"mixins": [
 		{
 			"config": "aureum.mixins.json"

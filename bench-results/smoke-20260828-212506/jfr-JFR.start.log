@@ -1,0 +1,4 @@
+89141:
+Started recording 1. No limit specified, using maxsize=250MB as default.
+
+Use jcmd 89141 JFR.dump name=aureum filename=FILEPATH to copy recording data to file.

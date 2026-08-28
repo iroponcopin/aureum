@@ -1,0 +1,11 @@
+{
+	"aureum.status.header": "Aureum %s — 有効な最適化:",
+	"aureum.status.on": "有効",
+	"aureum.status.off": "無効",
+	"aureum.status.dedup.on": "- ブロック状態キャッシュの共有: %s 個のキャッシュを %s 個の実体に共有中",
+	"aureum.status.dedup.off": "- ブロック状態キャッシュの共有: %s",
+	"aureum.status.guard": "- スレッド競合検出器の軽量化: %s",
+	"aureum.status.template.on": "- 構造物テンプレートキャッシュの保持期限: %s 秒(現在 %s 件、保護 %s 件)",
+	"aureum.status.template.off": "- 構造物テンプレートキャッシュの保持期限: %s",
+	"aureum.status.client": "- クライアント側の設定(専用サーバーでは計測不能): パーティクル上限 %s、ブロックエンティティ描画距離上限 %s"
+}

@@ -1,0 +1,8 @@
+{
+  "dedupeBlockStateCaches": false,
+  "slimThreadingDetector": false,
+  "structureTemplateCacheTtlSeconds": 0,
+  "particleLimit": 0,
+  "blockEntityRenderDistanceCap": 0,
+  "configVersion": 1
+}
