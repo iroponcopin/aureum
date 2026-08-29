@@ -59,3 +59,6 @@ compat/ops.json
 compat/usercache.json
 compat/whitelist.json
 compat/config/
+
+# JUnit(log4j)が repo 直下に吐くランタイムログ。成果物ではない。
+logs/

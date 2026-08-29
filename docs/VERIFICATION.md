@@ -28,7 +28,8 @@
 | thread_guard_tests_single_thread_cycles_are_silent | 実物検出器 10,000 周 + 実ブロック設置(PalettedContainer 書き込み経路) |
 | thread_guard_tests_race_crashes_both_threads_like_vanilla | 実競合: 両スレッドが同一の ReportedException、バニラ文言「Accessing … from multiple threads」 |
 | template_cache_tests_eviction_reloads_transparently | 追い出し(実際に ≥1 件)→ 透過的再読込・内容一致 |
-| template_cache_tests_player_created_templates_are_pinned | getOrCreate 由来はピン留めされ TTL 0 でも生存、remove で帳簿も消える |
+| template_cache_tests_worldgen_path_templates_are_evictable | 【回帰】ワールド生成の経路(ディスク実在テンプレートへの getOrCreate)は追い出せること — ベンチが見つけた「全ピン留めで TTL が形骸化」バグの固定 |
+| template_cache_tests_player_created_templates_are_pinned | getOrCreate の<b>新規作成枝</b>由来はピン留めされ TTL 0 でも生存、remove で帳簿も消える |
 
 - **RUN 1** (2026-08-28 21:33, report mtime 21:33): 8/8 pass(vanilla always_pass 込み)、失敗 0
 - **RUN 2** (2026-08-28 21:38, report mtime 21:38, 負の対照の復旧後): 8/8 pass、失敗 0
@@ -44,12 +45,49 @@
 | NC4 | RaceDetectorAlgorithm.unlock の throw を外す | JUnit race | **赤**: `raceThrowsTheSameExceptionOnBothThreads FAILED (AssertionFailedError at :119)` |
 | NC5 | shouldDrop の境界を `>=`→`>` | JUnit particle 境界 | **赤**: `particleBudgetBoundaries FAILED (:20)` |
 | NC6 | validate の TTL 60 秒床を外す | JUnit TTL 床 | **赤**: `validateEnforcesTtlFloor FAILED (:29)` |
+| NC7 | 元の実バグを再現(getOrCreate を無条件ピン留め) | 回帰テスト | **赤**: `a disk-backed template loaded through getOrCreate (the worldgen path) was NOT evictable — the pin heuristic has regressed to pin-everything and the TTL is inert (pinned=1)` |
 
-各対照の復旧後に上記 RUN 2(JUnit 15/15・GameTest 8/8)で緑へ戻ることを確認済み。
+各対照の復旧後に緑へ戻ることを確認済み(NC1–6 復旧後: JUnit 15/15・GameTest 8/8。
+NC7 復旧後: GameTest 9/9 — 回帰テスト追加後の総数)。
+
+### GameTest 追補(TTL 修正後の最終コード)
+
+- ピン留め修正 + 回帰テスト追加後: **9/9 pass**(2026-08-28 23:09、report mtime 同時刻)
+- NC7 の赤 → 復旧 → 9/9 pass(23:22)
+- 最終確認の 2 回目は下の「最終ゲート」参照。
 
 ## 3. 実測(ベンチ)
 
 → `docs/BENCHMARKS.md`(数値・再現手順・生データの所在)。
+
+## 3.5 最終ゲート(最終コード d687626 以降で実施、すべて 2 回)
+
+| ゲート | 1 回目 | 2 回目 |
+|---|---|---|
+| `./gradlew clean build` / `build --rerun-tasks` | BUILD SUCCESSFUL(23:40) | BUILD SUCCESSFUL(23:41)— jar の SHA-1 が両ビルドで一致(5d1f7041…) |
+| JUnit(--rerun-tasks) | 15/15、失敗 0 | 15/15、失敗 0 |
+| GameTest(run dir 掃除つき) | 9/9、失敗 0(23:22) | 9/9、失敗 0(report mtime 23:46:32) |
+| Alpha 2.5.1 互換起動(本番形式) | 下記 run1 | 下記 run2 |
+
+### Alpha 互換起動試験(本番形式の専用サーバー、fabric launcher + 本番リマップ jar)
+
+構成: alpha-{backrooms,boss,deco,guns,planarcadia,power,rail,sapporo,sky,survival,vehicles}-2.5.1.jar(11)
++ fabric-api-0.154.2+26.2(Modrinth、SHA-1 照合済み)+ aureum-1.0.0.jar。
+判定はログ行の数え上げ(exit code は使わない)。
+
+| 項目 | run1(新規ワールド) | run2(ワールド再読込、sapporo の .spro 導入後) |
+|---|---|---|
+| Done 行 | **Done (16.963s)** | **Done (3.732s)** |
+| MOD 読み込み(sorakaze_* 11 + aureum) | 12/12 | 12/12 |
+| aureum trace 行 | 2(dedup: **41,772 → 9,913**・TTL armed) | 2 |
+| コンソール `/aureum` の応答 | 全 5 行出力 | 全 5 行出力 |
+| mixin エラー | 0 | 0 |
+| ERROR 行 | 5 — 全て Alpha 側の既存条件(sapporo の .spro 未配置の意図的な大声 ×3、backrooms のレジストリ空 ×2)。aureum への言及なし | 2 — backrooms の同じ 2 行のみ(.spro を配置したので sapporo は解消) |
+| きれいな停止(Stopping + 全次元保存) | ✓ | ✓ |
+| GC.run ×3 後の使用ヒープ(jcmd) | 168,687K | 178,527K |
+
+本番環境でも dedup の実効が Alpha の追加ブロックぶん**大きくなる**ことが数字で出ている
+(バニラのみ 32,167 → パック込み 41,772 caches seen)。
 
 ## 4. この環境で検証できないもの(所有者の実機確認 register)
 

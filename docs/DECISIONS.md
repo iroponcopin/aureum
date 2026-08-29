@@ -10,7 +10,7 @@
 | # | 最適化 | 根拠(採用時の実測) |
 |---|--------|----------------------|
 | 1 | slimThreadingDetector | 2,209 チャンク読込の class histogram で ThreadingDetector + 付随 Semaphore/ReentrantLock が 136,032 組 / 約 17.4 MB(セクションの PalettedContainer 1 個につき 1 組)。検出セマンティクスはフィールド 3 本で完全再現できる。 |
-| 2 | structureTemplateCacheTtlSeconds | 同 histogram で StructureBlockInfo 302,650 個 / 7.26 MB + 付随 BlockPos 等。バニラはテンプレートをデータパック再読込まで永遠に保持する。 |
+| 2 | structureTemplateCacheTtlSeconds | 同 histogram で StructureBlockInfo 302,650 個 / 7.26 MB + 付随 BlockPos 等。バニラはテンプレートをデータパック再読込まで永遠に保持する。初版はワールド生成経路(getOrCreate)を誤って全ピン留めし TTL が形骸化 — **ベンチの histogram 比較が検出**し、修正+回帰テストを追加(BENCHMARKS.md「測定が捕まえた実バグ」)。 |
 | 3 | dedupeBlockStateCaches | 実機トレースで 32,167 個の状態キャッシュが内容 6,066 通り、遮蔽面配列 32,366 個が 5,504 通り — 8 割超が重複。 |
 | 4 | particleLimit(クライアント/既定 off) | 発注メニュー由来。この環境で FPS は測れないため opt-in +「未計測」明記で出荷。判定関数だけ JUnit で固定。 |
 | 5 | blockEntityRenderDistanceCap(クライアント/既定 off) | 同上。バニラより遠くへは絶対に描かない構造(近づける方向にしか働かない)。 |
