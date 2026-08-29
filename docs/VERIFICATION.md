@@ -89,6 +89,21 @@ NC7 復旧後: GameTest 9/9 — 回帰テスト追加後の総数)。
 本番環境でも dedup の実効が Alpha の追加ブロックぶん**大きくなる**ことが数字で出ている
 (バニラのみ 32,167 → パック込み 41,772 caches seen)。
 
+#### 警告の内訳(両ラン、全数)
+
+Aureum に起因する警告は **0 件**。出たものは以下だけで、すべて環境か Alpha 側の既存事情:
+
+| 警告 | 出所 | 判断 |
+|---|---|---|
+| `Unable to parse version 27.0 to a codename` | oshi(macOS 27 の版名を知らない) | 環境。無害 |
+| `SERVER IS RUNNING IN OFFLINE/INSECURE MODE` 他 3 行 | 試験用 server.properties の `online-mode=false` | 試験設定。意図どおり |
+| `Mod me_friwi_{jcef-api,jogl-all,gluegen-rt} uses the version … isn't compatible with … SemVer` | Alpha が同梱する JCEF/JOGL ライブラリの版表記 | Alpha 側の既存事項。Aureum 無関係 |
+| `Can't keep up! … 2070ms or 41 ticks behind`(**run2 のみ 1 回**) | Done の 3 秒後、Alpha 各モジュールの初期化中。run1 には無く、run1→run2 の間に**こちらが置いた 12 MB の sapporo 都市データ**の読み込みと一致 | 起動時の一過性。定常状態では再発せず、Aureum 起因ではない |
+
+ERROR 行も同様に全て Alpha 側の既存条件(run1 の 5 行 = sapporo の .spro 未配置を
+意図的に大声で言う 3 行 + backrooms のレジストリ空 2 行。.spro を置いた run2 では
+backrooms の 2 行のみ)。**どの ERROR/WARN 行にも aureum への言及は無い。**
+
 ## 4. この環境で検証できないもの(所有者の実機確認 register)
 
 1. **particleLimit の実効果**(FPS・見た目) — クライアント/GPU なし。判定関数のみ JUnit で固定。
