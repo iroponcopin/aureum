@@ -63,7 +63,7 @@ public final class Aureum implements ModInitializer {
 				StateCacheDeduper.faceArraysSeen(), StateCacheDeduper.distinctFaceArrays());
 		}
 		if (config.structureTemplateCacheTtlSeconds > 0
-				&& server.getStructureManager() instanceof TemplateCacheAccess access) {
+				&& server.getStructureTemplateManager() instanceof TemplateCacheAccess access) {
 			LOGGER.info("aureum trace: template cache TTL armed ({} s, sweep every {} ticks), {} cached now",
 				config.structureTemplateCacheTtlSeconds, TEMPLATE_SWEEP_INTERVAL_TICKS, access.aureum$cachedCount());
 		}
@@ -75,7 +75,7 @@ public final class Aureum implements ModInitializer {
 				|| server.getTickCount() % TEMPLATE_SWEEP_INTERVAL_TICKS != 0) {
 			return;
 		}
-		if (server.getStructureManager() instanceof TemplateCacheAccess access) {
+		if (server.getStructureTemplateManager() instanceof TemplateCacheAccess access) {
 			access.aureum$evictStale(config.structureTemplateCacheTtlSeconds * 1000L);
 		}
 	}
@@ -98,7 +98,7 @@ public final class Aureum implements ModInitializer {
 		source.sendSuccess(() -> line("aureum.status.guard", "- Slim threading detector: %s",
 			config.slimThreadingDetector ? on : off), false);
 		if (config.structureTemplateCacheTtlSeconds > 0
-				&& source.getServer().getStructureManager() instanceof TemplateCacheAccess access) {
+				&& source.getServer().getStructureTemplateManager() instanceof TemplateCacheAccess access) {
 			source.sendSuccess(() -> line("aureum.status.template.on",
 				"- Structure template cache TTL: %s s (%s cached, %s pinned)",
 				config.structureTemplateCacheTtlSeconds, access.aureum$cachedCount(),

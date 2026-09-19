@@ -302,7 +302,7 @@ public final class BenchDriver {
 		report.append("  \"loadedChunksEnd\": ").append(server.overworld().getChunkSource().getLoadedChunksCount()).append(",\n");
 		report.append("  \"entitiesEnd\": ").append(countEntities()).append(",\n");
 		report.append("  \"entitiesByType\": \"").append(entityBreakdown()).append("\",\n");
-		if (server.getStructureManager() instanceof net.sorakaze.aureum.template.TemplateCacheAccess access) {
+		if (server.getStructureTemplateManager() instanceof net.sorakaze.aureum.template.TemplateCacheAccess access) {
 			report.append("  \"templateCacheCount\": ").append(access.aureum$cachedCount()).append(",\n");
 		}
 		report.append("  \"heapUsedBytes\": ").append(heapSamples).append(",\n");

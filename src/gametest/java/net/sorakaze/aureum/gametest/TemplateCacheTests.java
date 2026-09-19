@@ -27,7 +27,7 @@ public class TemplateCacheTests {
 	/** 追い出し → 透過的な読み直し。非空虚性: 実際に 1 件以上追い出されたことを要求。 */
 	@GameTest(maxTicks = 400)
 	public void evictionReloadsTransparently(final GameTestHelper helper) {
-		StructureTemplateManager manager = helper.getLevel().getServer().getStructureManager();
+		StructureTemplateManager manager = helper.getLevel().getServer().getStructureTemplateManager();
 		if (!(manager instanceof TemplateCacheAccess access)) {
 			helper.fail("StructureTemplateManager does not implement TemplateCacheAccess —"
 				+ " the TTL mixin did not apply; every other green here would prove nothing");
@@ -75,7 +75,7 @@ public class TemplateCacheTests {
 	 */
 	@GameTest(maxTicks = 400)
 	public void worldgenPathTemplatesAreEvictable(final GameTestHelper helper) {
-		StructureTemplateManager manager = helper.getLevel().getServer().getStructureManager();
+		StructureTemplateManager manager = helper.getLevel().getServer().getStructureTemplateManager();
 		if (!(manager instanceof TemplateCacheAccess access)) {
 			helper.fail("TTL mixin did not apply");
 			return;
@@ -110,7 +110,7 @@ public class TemplateCacheTests {
 	/** structure block(getOrCreate の新規作成枝)由来はピン留めされ、TTL 0 でも生き残る。 */
 	@GameTest(maxTicks = 400)
 	public void playerCreatedTemplatesArePinned(final GameTestHelper helper) {
-		StructureTemplateManager manager = helper.getLevel().getServer().getStructureManager();
+		StructureTemplateManager manager = helper.getLevel().getServer().getStructureTemplateManager();
 		if (!(manager instanceof TemplateCacheAccess access)) {
 			helper.fail("TTL mixin did not apply");
 			return;
